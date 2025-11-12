@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Quản lý Cư trú</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Optional icons (Font Awesome) -->
+  <script src="https://kit.fontawesome.com/a2d9b6f9a6.js" crossorigin="anonymous"></script>
+
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; }
+    .sidebar {
+      width: 250px;
+      background-color: #0f3c3c;
+      color: white;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .sidebar .menu button { color: white; text-align: left; background: none; border: none; width:100%;}
+    .sidebar .menu button:hover { background:#135353; border-radius:6px;}
+    .content { flex: 1; padding: 24px; min-height:100vh; background:#f9f9f9; }
+
+    /* Title + controls */
+    .page-header { gap: 12px; align-items: center; display:flex; flex-wrap:wrap; justify-content:space-between; }
+    .header-left { display:flex; gap:12px; align-items:center; min-width:0; }
+    .person-title { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    /* Primary big button */
+    .btn-primary-giant {
+      background-color:#0d6efd;
+      border-color:#0d6efd;
+      color:white;
+      padding:10px 16px;
+      font-weight:600;
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+
+    /* Small helpers */
+    .filter-row { gap:12px; margin-top:12px; display:flex; flex-wrap:wrap; }
+    .table-wrap { margin-top:18px; }
+
+    /* Make headers indicate sortable */
+    th.sortable { cursor: pointer; user-select: none; }
+    th .sort-ind { font-size:0.85em; opacity:0.6; margin-left:6px; }
+
+    /* small responsive tweaks */
+    @media (max-width: 767px) {
+      .sidebar { display:none; }
+      .content { padding:12px; }
+      .header-left { width:100%; }
+      .filter-row { flex-direction:column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="d-flex">
+    <!-- Sidebar -->
+    <aside class="sidebar d-flex flex-column justify-content-between">
+      <div>
+        <h4 class="mb-4">NHÓM 36</h4>
+        <div class="menu">
+          <button onclick="goTo('trang_chu.html')" class="mb-2">TRANG CHỦ</button>
+          <button style="background:#135353; border-radius:6px;" class="mb-2">QUẢN LÝ HỘ KHẨU</button>
+          <button onclick="goTo('quan_ly_nhan_khau.html')" class="mb-2">QUẢN LÝ NHÂN KHẨU</button>
+          <button onclick="goTo('lich_sinh_hoat.html')" class="mb-2">LỊCH SINH HOẠT</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="d-flex align-items-center mb-2" onclick="logout()" style="cursor:pointer">
+          <i class="fa-solid fa-right-from-bracket me-2"></i><span>Đăng xuất</span>
+        </div>
+        <div class="d-flex align-items-center profile">
+          <img src="/avatar.jpg" alt="avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover" />
+          <div class="ms-2" id="usernameDisplay">Quản lý</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="content flex-fill">
+      <!-- Stat Cards -->
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <div class="card text-white bg-primary">
+            <div class="card-body">
+              <h5 class="card-title">Tổng số Người Thường trú</h5>
+              <p class="card-text fs-3">10,200</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card text-white bg-info">
+            <div class="card-body">
+              <h5 class="card-title">Tổng số Người Tạm trú</h5>
+              <p class="card-text fs-3">850</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card text-white bg-success">
+            <div class="card-body">
+              <h5 class="card-title">Tăng/Giảm Cư trú trong tháng</h5>
+              <p class="card-text fs-3">Tăng +12 người mới</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card text-white bg-warning">
+            <div class="card-body">
+              <h5 class="card-title">Tạm trú Sắp hết hạn</h5>
+              <p class="card-text fs-3">55 hồ sơ</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Header / Controls -->
+      <div class="page-header">
+        <div class="header-left">
+          <div>
+            <h3 class="mb-0 person-title">Danh sách Cư trú</h3>
+            <small class="text-muted">Quản lý cư trú — xem / đăng ký / chỉnh sửa</small>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+          <button id="btnAddPermanent" class="btn btn-primary-giant" data-bs-toggle="modal" data-bs-target="#permanentModal">
+            <i class="fa-solid fa-plus"></i> <span>Đăng ký Thường trú Mới</span>
+          </button>
+          <button id="btnAddTemporary" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#temporaryModal">
+            <i class="fa-solid fa-plus"></i> <span>Đăng ký Tạm trú</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search & Filters -->
+      <div class="filter-row align-items-center">
+        <div class="input-group" style="min-width:260px; flex:1; max-width:520px;">
+          <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+          <input id="searchInput" class="form-control" placeholder="Tìm theo Địa chỉ, Mã Định danh, hoặc Họ tên...">
+          <button class="btn btn-outline-secondary" id="clearSearchBtn" title="Xóa">×</button>
+        </div>
+
+        <div class="d-flex gap-2">
+          <select id="filterType" class="form-select">
+            <option value="All">Tất cả loại cư trú</option>
+            <option value="Thường trú">Thường trú</option>
+            <option value="Tạm trú">Tạm trú</option>
+          </select>
+
+          <select id="filterWarning" class="form-select">
+            <option value="All">Tất cả tình trạng cảnh báo</option>
+            <option value="Sắp hết hạn Tạm trú">Sắp hết hạn Tạm trú</option>
+            <option value="Cần Xóa cư trú">Cần Xóa cư trú</option>
+          </select>
+
+          <select id="filterArea" class="form-select">
+            <option value="All">Tất cả khu vực</option>
+            <option value="Tổ 1">Tổ 1</option>
+            <option value="Tổ 2">Tổ 2</option>
+            <option value="Tổ 3">Tổ 3</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrap">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle" id="residencyTable">
+            <thead class="table-light">
+              <tr>
+                <th class="sortable" data-key="cccd">Mã Định danh/CCCD <span class="sort-ind">▲▼</span></th>
+                <th class="sortable" data-key="name">Họ và Tên</th>
+                <th class="sortable" data-key="type">Loại Cư trú</th>
+                <th class="sortable" data-key="address">Địa chỉ Cư trú</th>
+                <th class="sortable" data-key="start_date">Ngày Bắt đầu Cư trú</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="residencyTbody">
+              <!-- rows inserted by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal: Đăng ký Thường trú Mới -->
+  <div class="modal fade" id="permanentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <form id="permanentForm" class="modal-content" onsubmit="return false;">
+        <div class="modal-header">
+          <h5 class="modal-title">Đăng ký Thường trú Mới</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editingIndexPerm" value="-1">
+
+          <!-- Group 1: Thông tin Cá nhân -->
+          <h5 class="mb-3">Thông tin Cá nhân</h5>
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Mã Định danh Cá nhân <span class="text-danger">*</span></label>
+            <div class="col-sm-9">
+              <input id="cccdPerm" class="form-control" required pattern="\d{12}" placeholder="12 chữ số" />
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Họ và Tên <span class="text-danger">*</span></label>
+            <div class="col-sm-9">
+              <input id="namePerm" class="form-control" required />
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Ngày sinh</label>
+            <div class="col-sm-9">
+              <input id="ngaySinhPerm" type="date" class="form-control" />
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Mối quan hệ với Chủ hộ</label>
+            <div class="col-sm-9">
+              <select id="quanHePerm" class="form-select">
+                <option value="">-- Chọn --</option>
+                <option value="Chủ hộ">Chủ hộ</option>
+                <option value="Vợ/Chồng">Vợ/Chồng</option>
+                <option value="Con">Con</option>
+                <option value="Khác">Khác</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Group 2: Thông tin Địa chỉ Thường trú Mới -->
+          <h5 class="mb-3 mt-4">Thông tin Địa chỉ Thường trú Mới</h5>
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Tỉnh/Thành phố <span class="text-danger">*</span></label>
+            <div class="col-sm-9">
+              <select id="tinhPerm" class="form-select" required>
+                <option value="">-- Chọn --</option>
+                <option value="TP.HCM">TP.HCM</option>
+                <option value="Hà Nội">Hà Nội</option>
+                <!-- Thêm các tỉnh khác -->
+              </select>
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Quận/Huyện <span class="text-danger">*</span></label>
+            <div class="col-sm-9">
+              <select id="quanPerm" class="form-select" required>
+                <option value="">-- Chọn --</option>
+                <option value="Quận 1">Quận 1</option>
+                <option value="Huyện Bình Chánh">Huyện Bình Chánh</option>
+                <!-- Thêm các quận/huyện -->
+              </select>
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Xã/Phường <span class="text-danger">*</span></label>
+            <div class="col-sm-9">
+              <select id="xaPerm" class="form-select" required>
+                <option value="">-- Chọn --</option>
+                <option value="Phường Bến Nghé">Phường Bến Nghé</option>
+                <option value="Xã Tân Túc">Xã Tân Túc</option>
+                <!-- Thêm các xã/phường -->
+              </select>
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Số nhà, Tên đường/Tổ dân phố <span class="text-danger">*</span></label>
+            <div class="col-sm-9">
+              <input id="chiTietDiaChiPerm" class="form-control" required placeholder="Ví dụ: 123 Đường ABC, Tổ 1" />
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Lý do Đăng ký <span class="text-danger">*</span></label>
+            <div class="col-sm-9">
+              <select id="lyDoPerm" class="form-select" required>
+                <option value="">-- Chọn --</option>
+                <option value="Mua nhà">Mua nhà</option>
+                <option value="Thuê/Mượn">Thuê/Mượn</option>
+                <option value="Do người thân bảo lãnh">Do người thân bảo lãnh</option>
+                <option value="Khác">Khác</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Giấy tờ chứng minh chỗ ở</label>
+            <div class="col-sm-9">
+              <input id="filePerm" type="file" class="form-control" />
+            </div>
+          </div>
+
+          <div id="formAlertPerm" class="alert alert-danger d-none" role="alert"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button id="savePermBtn" type="submit" class="btn btn-primary">Xác nhận Đăng ký</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Đăng ký Tạm trú -->
+  <div class="modal fade" id="temporaryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <form id="temporaryForm" class="modal-content" onsubmit="return false;">
+        <div class="modal-header">
+          <h5 class="modal-title">Đăng ký Tạm trú</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editingIndexTemp" value="-1">
+
+          <!-- Thông tin Cá nhân -->
+          <h5 class="mb-3">Thông tin Cá nhân</h5>
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Mã Định danh Cá nhân <span class="text-danger">*</span></label>
+            <div class="col-sm-9">
+              <input id="cccdTemp" class="form-control" required pattern="\d{12}" placeholder="12 chữ số" />
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Họ và Tên <span class="text-danger">*</span></label>
+            <div class="col-sm-9">
+              <input id="nameTemp" class="form-control" required />
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Ngày sinh</label>
+            <div class="col-sm-9">
+              <input id="ngaySinhTemp" type="date" class="form-control" />
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Mối quan hệ với Chủ hộ</label>
+            <div class="col-sm-9">
+              <select id="quanHeTemp" class="form-select">
+                <option value="">-- Chọn --</option>
+                <option value="Chủ hộ">Chủ hộ</option>
+                <option value="Vợ/Chồng">Vợ/Chồng</option>
+                <option value="Con">Con</option>
+                <option value="Khác">Khác</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Thông tin Tạm trú -->
+          <h5 class="mb-3 mt-4">Thông tin Tạm trú</h5>
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Địa chỉ Tạm trú <span class="text-danger">*</span></label>
+            <div class="col-sm-9">
+              <input id="diaChiTemp" class="form-control" required placeholder="Địa chỉ chi tiết" />
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Ngày bắt đầu <span class="text-danger">*</span></label>
+            <div class="col-sm-9">
+              <input id="startDateTemp" type="date" class="form-control" required onchange="calculateEndDate()" />
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Thời hạn Đăng ký <span class="text-danger">*</span></label>
+            <div class="col-sm-9 d-flex gap-2">
+              <input id="durationNum" type="number" class="form-control" min="1" max="24" required placeholder="Số" onchange="calculateEndDate()" />
+              <select id="durationUnit" class="form-select" onchange="calculateEndDate()">
+                <option value="tháng">tháng</option>
+                <option value="năm">năm</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Ngày hết hạn</label>
+            <div class="col-sm-9">
+              <input id="endDateTemp" type="date" class="form-control" readonly />
+            </div>
+          </div>
+
+          <div id="formAlertTemp" class="alert alert-danger d-none" role="alert"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button id="saveTempBtn" type="submit" class="btn btn-primary">Xác nhận Đăng ký</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 JS bundle (includes Popper) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // Current date
+    const currentDate = new Date(2025, 10, 12); // November 12, 2025 (month 0-based)
+
+    // Basic data model (in-memory)
+    const sampleResidencies = [
+      {
+        cccd: '001234567890',
+        name: 'Nguyễn Văn A',
+        type: 'Thường trú',
+        address: '123 Đường ABC, Phường XYZ, Quận 1, TP.HCM',
+        start_date: '2010-01-01',
+        end_date: null,
+        area: 'Tổ 1',
+        warning: null
+      },
+      {
+        cccd: '002345678901',
+        name: 'Trần Thị B',
+        type: 'Tạm trú',
+        address: '456 Đường DEF, Phường ABC, Quận 2, TP.HCM',
+        start_date: '2025-10-01',
+        end_date: '2025-11-20', // About to expire
+        area: 'Tổ 2',
+        warning: 'Sắp hết hạn Tạm trú'
+      },
+      {
+        cccd: '003456789012',
+        name: 'Lê Văn C',
+        type: 'Thường trú',
+        address: '789 Đường GHI, Phường DEF, Quận 3, TP.HCM',
+        start_date: '2020-05-15',
+        end_date: null,
+        area: 'Tổ 3',
+        warning: 'Cần Xóa cư trú' // Sample
+      },
+      {
+        cccd: '004567890123',
+        name: 'Phạm Thị D',
+        type: 'Tạm trú',
+        address: '101 Đường JKL, Phường GHI, Quận 4, TP.HCM',
+        start_date: '2025-09-01',
+        end_date: '2026-09-01', // Not expiring soon
+        area: 'Tổ 1',
+        warning: null
+      },
+      {
+        cccd: '005678901234',
+        name: 'Hoàng Văn E',
+        type: 'Thường trú',
+        address: '202 Đường MNO, Phường JKL, Quận 5, TP.HCM',
+        start_date: '2015-03-20',
+        end_date: null,
+        area: 'Tổ 2',
+        warning: null
+      },
+      {
+        cccd: '006789012345',
+        name: 'Vũ Thị F',
+        type: 'Tạm trú',
+        address: '303 Đường PQR, Phường MNO, Quận 6, TP.HCM',
+        start_date: '2025-11-01',
+        end_date: '2025-12-01', // About to expire
+        area: 'Tổ 3',
+        warning: 'Sắp hết hạn Tạm trú'
+      },
+      {
+        cccd: '007890123456',
+        name: 'Đặng Văn G',
+        type: 'Thường trú',
+        address: '404 Đường STU, Phường PQR, Quận 7, TP.HCM',
+        start_date: '2018-07-10',
+        end_date: null,
+        area: 'Tổ 1',
+        warning: null
+      }
+    ];
+
+    let residencies = JSON.parse(localStorage.getItem('residencies') || 'null') || sampleResidencies.slice();
+    const tbody = document.getElementById('residencyTbody');
+
+    // Helpers
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const [year, month, day] = dateStr.split('-');
+      return `${day}/${month}/${year}`;
+    }
+
+    function getWarning(res) {
+      if (res.type !== 'Tạm trú' || !res.end_date) return res.warning || null;
+      const endDate = new Date(res.end_date);
+      const daysLeft = Math.ceil((endDate - currentDate) / (1000 * 60 * 60 * 24));
+      return daysLeft > 0 && daysLeft <= 30 ? 'Sắp hết hạn Tạm trú' : null;
+    }
+
+    function typeBadge(type) {
+      switch(type) {
+        case 'Thường trú': return '<span class="badge bg-success">Thường trú</span>';
+        case 'Tạm trú': return '<span class="badge bg-warning text-dark">Tạm trú</span>';
+        default: return `<span class="badge bg-light text-dark">${type}</span>`;
+      }
+    }
+
+    // Render table
+    function renderTable(sortKey=null, sortDir=1) {
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      const typeFilter = document.getElementById('filterType').value;
+      const warningFilter = document.getElementById('filterWarning').value;
+      const areaFilter = document.getElementById('filterArea').value;
+
+      let filtered = residencies.filter(res => {
+        const warning = getWarning(res);
+        if (typeFilter !== 'All' && res.type !== typeFilter) return false;
+        if (warningFilter !== 'All' && warning !== warningFilter) return false;
+        if (areaFilter !== 'All' && res.area !== areaFilter) return false;
+        if (q) {
+          const hay = `${res.name} ${res.cccd} ${res.address}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+
+      if (sortKey) {
+        filtered.sort((a, b) => {
+          let va = a[sortKey] || '';
+          let vb = b[sortKey] || '';
+          if (sortKey === 'start_date') {
+            return (new Date(va) - new Date(vb)) * sortDir;
+          }
+          if (va < vb) return -1 * sortDir;
+          if (va > vb) return 1 * sortDir;
+          return 0;
+        });
+      }
+
+      tbody.innerHTML = '';
+      filtered.forEach((res, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${res.cccd}</td>
+          <td>${res.name}</td>
+          <td>${typeBadge(res.type)}</td>
+          <td>${res.address}</td>
+          <td>${formatDate(res.start_date)}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-info me-1" title="Xem chi tiết" onclick="viewResidency(${idx})"><i class="fa-regular fa-eye"></i></button>
+            <button class="btn btn-sm btn-outline-secondary me-1" title="Chuyển nơi cư trú" onclick="transferResidency(${idx})"><i class="fa-solid fa-arrows-rotate"></i></button>
+            <button class="btn btn-sm btn-outline-danger" title="Xóa cư trú" onclick="deleteResidency(${idx})"><i class="fa-regular fa-trash-can"></i></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      localStorage.setItem('residencies', JSON.stringify(residencies));
+    }
+
+    // Sorting
+    let currentSort = { key: 'cccd', dir: 1 };
+    document.querySelectorAll('th.sortable').forEach(th => {
+      th.addEventListener('click', () => {
+        const key = th.dataset.key;
+        if (currentSort.key === key) currentSort.dir *= -1;
+        else { currentSort.key = key; currentSort.dir = 1; }
+        renderTable(currentSort.key, currentSort.dir);
+      });
+    });
+
+    // Filters & search
+    document.getElementById('filterType').addEventListener('change', () => renderTable(currentSort.key, currentSort.dir));
+    document.getElementById('filterWarning').addEventListener('change', () => renderTable(currentSort.key, currentSort.dir));
+    document.getElementById('filterArea').addEventListener('change', () => renderTable(currentSort.key, currentSort.dir));
+    document.getElementById('searchInput').addEventListener('input', () => renderTable(currentSort.key, currentSort.dir));
+    document.getElementById('clearSearchBtn').addEventListener('click', () => { document.getElementById('searchInput').value=''; renderTable(currentSort.key, currentSort.dir); });
+
+    // Modal Permanent
+    const permanentModalEl = document.getElementById('permanentModal');
+    const permanentModal = new bootstrap.Modal(permanentModalEl);
+
+    document.getElementById('permanentForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const cccd = document.getElementById('cccdPerm').value.trim();
+      const name = document.getElementById('namePerm').value.trim();
+      const ngaySinh = document.getElementById('ngaySinhPerm').value;
+      const quanHe = document.getElementById('quanHePerm').value;
+      const tinh = document.getElementById('tinhPerm').value;
+      const quan = document.getElementById('quanPerm').value;
+      const xa = document.getElementById('xaPerm').value;
+      const chiTietDiaChi = document.getElementById('chiTietDiaChiPerm').value.trim();
+      const lyDo = document.getElementById('lyDoPerm').value;
+      const file = document.getElementById('filePerm').files[0]?.name;
+
+      const alertBox = document.getElementById('formAlertPerm');
+      alertBox.classList.add('d-none');
+
+      if (!cccd || !name || !tinh || !quan || !xa || !chiTietDiaChi || !lyDo) {
+        alertBox.textContent = 'Vui lòng điền đầy đủ các trường bắt buộc (*).';
+        alertBox.classList.remove('d-none');
+        return;
+      }
+
+      const address = `${chiTietDiaChi}, ${xa}, ${quan}, ${tinh}`;
+      const res = {
+        cccd, name, type: 'Thường trú', address, start_date: new Date().toISOString().split('T')[0],
+        end_date: null, area: 'Tổ 1' // Sample
+      };
+
+      residencies.push(res);
+      permanentModal.hide();
+      renderTable(currentSort.key, currentSort.dir);
+    });
+
+    // Modal Temporary
+    const temporaryModalEl = document.getElementById('temporaryModal');
+    const temporaryModal = new bootstrap.Modal(temporaryModalEl);
+
+    document.getElementById('temporaryForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const cccd = document.getElementById('cccdTemp').value.trim();
+      const name = document.getElementById('nameTemp').value.trim();
+      const ngaySinh = document.getElementById('ngaySinhTemp').value;
+      const quanHe = document.getElementById('quanHeTemp').value;
+      const diaChi = document.getElementById('diaChiTemp').value.trim();
+      const startDate = document.getElementById('startDateTemp').value;
+      const endDate = document.getElementById('endDateTemp').value;
+
+      const alertBox = document.getElementById('formAlertTemp');
+      alertBox.classList.add('d-none');
+
+      if (!cccd || !name || !diaChi || !startDate || !endDate) {
+        alertBox.textContent = 'Vui lòng điền đầy đủ các trường bắt buộc (*).';
+        alertBox.classList.remove('d-none');
+        return;
+      }
+
+      const res = {
+        cccd, name, type: 'Tạm trú', address: diaChi, start_date: startDate,
+        end_date: endDate, area: 'Tổ 2' // Sample
+      };
+
+      residencies.push(res);
+      temporaryModal.hide();
+      renderTable(currentSort.key, currentSort.dir);
+    });
+
+    // Calculate end date for temporary
+    function calculateEndDate() {
+      const startDateStr = document.getElementById('startDateTemp').value;
+      const num = parseInt(document.getElementById('durationNum').value, 10);
+      const unit = document.getElementById('durationUnit').value;
+
+      if (startDateStr && !isNaN(num)) {
+        let startDate = new Date(startDateStr);
+        if (unit === 'tháng') {
+          startDate.setMonth(startDate.getMonth() + num);
+        } else if (unit === 'năm') {
+          startDate.setFullYear(startDate.getFullYear() + num);
+        }
+        const yyyy = startDate.getFullYear();
+        const mm = String(startDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(startDate.getDate()).padStart(2, '0');
+        document.getElementById('endDateTemp').value = `${yyyy}-${mm}-${dd}`;
+      } else {
+        document.getElementById('endDateTemp').value = '';
+      }
+    }
+
+    // Placeholder functions
+    function viewResidency(idx) {
+      const res = residencies[idx];
+      alert(`Chi tiết: ${res.name} - ${res.type}\nĐịa chỉ: ${res.address}`);
+    }
+
+    function transferResidency(idx) {
+      alert('Chuyển nơi cư trú cho index ' + idx);
+    }
+
+    function deleteResidency(idx) {
+      if (confirm('Xóa cư trú?')) {
+        residencies.splice(idx, 1);
+        renderTable(currentSort.key, currentSort.dir);
+      }
+    }
+
+    // Initialize
+    renderTable(currentSort.key, currentSort.dir);
+
+    // Navigation / helpers
+    function goTo(p){ window.location.href=p; }
+    function logout(){ localStorage.removeItem('username'); window.location.href='/'; }
+  </script>
+</body>
+</html>

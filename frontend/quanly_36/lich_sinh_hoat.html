@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lịch Sinh Hoạt Cộng Đồng - Tổ Dân Phố</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Optional icons (Font Awesome) -->
+  <script src="https://kit.fontawesome.com/a2d9b6f9a6.js" crossorigin="anonymous"></script>
+
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; }
+    .sidebar {
+      width: 250px;
+      background-color: #0f3c3c;
+      color: white;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .sidebar .menu button { color: white; text-align: left; background: none; border: none; width:100%;}
+    .sidebar .menu button:hover { background:#135353; border-radius:6px;}
+    .content { flex: 1; padding: 24px; min-height:100vh; background:#f9f9f9; }
+
+    /* Title + controls */
+    .page-header { gap: 12px; align-items: center; display:flex; flex-wrap:wrap; justify-content:space-between; }
+    .header-left { display:flex; gap:12px; align-items:center; min-width:0; }
+    .person-title { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    /* Primary big button */
+    .btn-primary-giant {
+      background-color:#0d6efd;
+      border-color:#0d6efd;
+      color:white;
+      padding:10px 16px;
+      font-weight:600;
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+
+    /* Small helpers */
+    .filter-row { gap:12px; margin-top:12px; display:flex; flex-wrap:wrap; }
+    .table-wrap { margin-top:18px; }
+
+    /* Make headers indicate sortable */
+    th.sortable { cursor: pointer; user-select: none; }
+    th .sort-ind { font-size:0.85em; opacity:0.6; margin-left:6px; }
+
+    /* small responsive tweaks */
+    @media (max-width: 767px) {
+      .sidebar { display:none; }
+      .content { padding:12px; }
+      .header-left { width:100%; }
+      .filter-row { flex-direction:column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="d-flex">
+    <!-- Sidebar -->
+    <aside class="sidebar d-flex flex-column justify-content-between">
+      <div>
+        <h4 class="mb-4">NHÓM 36</h4>
+        <div class="menu">
+          <button onclick="goTo('trang_chu.html')" class="mb-2">TRANG CHỦ</button>
+          <button onclick="goTo('quan_ly_ho_khau.html')" class="mb-2">QUẢN LÝ HỘ KHẨU</button>
+          <button onclick="goTo('quan_ly_nhan_khau.html')" class="mb-2">QUẢN LÝ NHÂN KHẨU</button>
+          <button style="background:#135353; border-radius:6px;" class="mb-2">LỊCH SINH HOẠT</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="d-flex align-items-center mb-2" onclick="logout()" style="cursor:pointer">
+          <i class="fa-solid fa-right-from-bracket me-2"></i><span>Đăng xuất</span>
+        </div>
+        <div class="d-flex align-items-center profile">
+          <img src="/avatar.jpg" alt="avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover" />
+          <div class="ms-2" id="usernameDisplay">Quản lý</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="content flex-fill">
+      <!-- Header / Controls -->
+      <div class="page-header">
+        <div class="header-left">
+          <div>
+            <h3 class="mb-0 person-title" id="pageTitle">Lịch Sinh hoạt Cộng đồng Tổ Dân Phố 36</h3>
+            <small class="text-muted">Quản lý sự kiện cộng đồng — xem / thêm / chỉnh sửa sự kiện</small>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+          <button id="btnAddEvent" class="btn btn-primary-giant" data-bs-toggle="modal" data-bs-target="#eventModal">
+            <i class="fa-solid fa-plus"></i> <span>Tạo Sự kiện/Thông báo Mới</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search & Filters -->
+      <div class="filter-row align-items-center">
+        <div class="input-group" style="min-width:260px; flex:1; max-width:520px;">
+          <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+          <input id="searchInput" class="form-control" placeholder="Tìm theo tiêu đề, nội dung hoặc người phụ trách...">
+          <button class="btn btn-outline-secondary" id="clearSearchBtn" title="Xóa">×</button>
+        </div>
+
+        <div class="d-flex gap-2">
+          <select id="filterType" class="form-select">
+            <option value="All">Tất cả loại</option>
+            <option value="Họp Tổ dân phố">Họp Tổ dân phố</option>
+            <option value="Hoạt động An ninh/Vệ sinh">Hoạt động An ninh/Vệ sinh</option>
+            <option value="Sự kiện Văn hóa/Thể thao">Sự kiện Văn hóa/Thể thao</option>
+            <option value="Thu phí/Đóng góp">Thu phí/Đóng góp</option>
+            <option value="Thông báo Khẩn cấp">Thông báo Khẩn cấp</option>
+          </select>
+
+          <select id="filterStatus" class="form-select">
+            <option value="All">Tất cả trạng thái</option>
+            <option value="Sắp diễn ra">Sắp diễn ra</option>
+            <option value="Đã tổ chức">Đã tổ chức</option>
+            <option value="Thông báo đang hiệu lực">Thông báo đang hiệu lực</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrap">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle" id="eventsTable">
+            <thead class="table-light">
+              <tr>
+                <th class="sortable" data-key="datetime_start">Ngày &amp; Giờ Bắt đầu <span class="sort-ind" id="sortDatetime">▲▼</span></th>
+                <th class="sortable" data-key="type">Loại Hoạt động</th>
+                <th class="sortable" data-key="title">Tiêu đề</th>
+                <th class="sortable" data-key="location">Địa điểm</th>
+                <th class="sortable" data-key="actor">Người Phụ trách</th>
+                <th class="sortable" data-key="status">Trạng thái</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="eventsTbody">
+              <!-- rows inserted by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal: Add / Edit Event -->
+  <div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <form id="eventForm" class="modal-content" onsubmit="return false;">
+        <div class="modal-header">
+          <h5 class="modal-title" id="eventModalTitle">Tạo Sự kiện/Thông báo Mới</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editingIndex" value="-1">
+
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Tiêu đề <span class="text-danger">*</span></label>
+            <div class="col-sm-9">
+              <input id="evtTitle" class="form-control" required maxlength="200" />
+            </div>
+          </div>
+
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Loại Hoạt động <span class="text-danger">*</span></label>
+            <div class="col-sm-9">
+              <select id="evtType" class="form-select" required>
+                <option value="">-- Chọn loại --</option>
+                <option value="Họp Tổ dân phố">📣 Họp Tổ dân phố</option>
+                <option value="Hoạt động An ninh/Vệ sinh">🗑️ Hoạt động An ninh/Vệ sinh</option>
+                <option value="Sự kiện Văn hóa/Thể thao">🎉 Sự kiện Văn hóa/Thể thao</option>
+                <option value="Thu phí/Đóng góp">💰 Thu phí/Đóng góp</option>
+                <option value="Thông báo Khẩn cấp">🚨 Thông báo Khẩn cấp</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Ngày &amp; Giờ Bắt đầu <span class="text-danger">*</span></label>
+            <div class="col-sm-9 d-flex gap-2">
+              <input id="evtStartDate" type="date" class="form-control" required />
+              <input id="evtStartTime" type="time" class="form-control" required />
+            </div>
+          </div>
+
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Ngày &amp; Giờ Kết thúc</label>
+            <div class="col-sm-9 d-flex gap-2">
+              <input id="evtEndDate" type="date" class="form-control" />
+              <input id="evtEndTime" type="time" class="form-control" />
+            </div>
+          </div>
+
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Địa điểm <span class="text-danger">*</span></label>
+            <div class="col-sm-9">
+              <input id="evtLocation" class="form-control" placeholder="Ví dụ: Nhà văn hóa, Sân chung..." required />
+            </div>
+          </div>
+
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Người Phụ trách <span class="text-danger">*</span></label>
+            <div class="col-sm-9">
+              <input id="evtActor" class="form-control" placeholder="Tên và Chức danh" required />
+            </div>
+          </div>
+
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Nội dung Chi tiết/Mục đích</label>
+            <div class="col-sm-9">
+              <textarea id="evtDesc" rows="4" class="form-control" placeholder="Mô tả thêm..."></textarea>
+            </div>
+          </div>
+
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Tệp đính kèm</label>
+            <div class="col-sm-9">
+              <input id="evtFile" type="file" class="form-control" />
+            </div>
+          </div>
+
+          <div class="mb-3 row">
+            <label class="col-sm-3 col-form-label">Trạng thái <span class="text-danger">*</span></label>
+            <div class="col-sm-9">
+              <select id="evtStatus" class="form-select" required>
+                <option value="">-- Chọn trạng thái --</option>
+                <option value="Sắp diễn ra">Sắp diễn ra</option>
+                <option value="Đã tổ chức">Đã tổ chức</option>
+                <option value="Thông báo đang hiệu lực">Thông báo đang hiệu lực</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="formAlert" class="alert alert-danger d-none" role="alert"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button id="saveEventBtn" type="submit" class="btn btn-primary">Lưu Sự kiện</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 JS bundle (includes Popper) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // Basic data model (in-memory). Optionally persist in localStorage later.
+    const sampleEvents = [
+      {
+        datetime_start: '2025-11-20T14:00', // ISO
+        datetime_end: '2025-11-20T16:00',
+        type: 'Họp Tổ dân phố',
+        title: 'Họp tổng kết quý IV',
+        location: 'Nhà văn hóa tổ dân phố',
+        actor: 'Ông Nguyễn Văn B - Trưởng tổ',
+        status: 'Sắp diễn ra',
+        desc: 'Thảo luận về các vấn đề an ninh và vệ sinh khu vực.',
+      },
+      {
+        datetime_start: '2025-10-15T08:00',
+        datetime_end: '2025-10-15T12:00',
+        type: 'Hoạt động An ninh/Vệ sinh',
+        title: 'Dọn vệ sinh đường phố',
+        location: 'Sân chung và đường làng',
+        actor: 'Bà Trần Thị C - Tổ phó',
+        status: 'Đã tổ chức',
+        desc: 'Hoạt động dọn dẹp môi trường với sự tham gia của cư dân.',
+      },
+      {
+        datetime_start: '2025-12-01T18:00',
+        datetime_end: '',
+        type: 'Sự kiện Văn hóa/Thể thao',
+        title: 'Giải bóng đá giao hữu',
+        location: 'Sân bóng tổ dân phố',
+        actor: 'Anh Lê Văn D - Đại diện thanh niên',
+        status: 'Sắp diễn ra',
+        desc: 'Giải thi đấu bóng đá giữa các nhóm trong tổ.',
+      },
+      {
+        datetime_start: '2025-09-25T09:00',
+        datetime_end: '2025-09-25T11:00',
+        type: 'Thu phí/Đóng góp',
+        title: 'Thu quỹ hỗ trợ gia đình khó khăn',
+        location: 'Trụ sở tổ dân phố',
+        actor: 'Ông Phạm Văn E - Trưởng tổ',
+        status: 'Đã tổ chức',
+        desc: 'Thu phí tự nguyện để hỗ trợ các hộ nghèo.',
+      },
+      {
+        datetime_start: '2025-11-10T00:00',
+        datetime_end: '',
+        type: 'Thông báo Khẩn cấp',
+        title: 'Cảnh báo thời tiết xấu',
+        location: 'Toàn khu vực',
+        actor: 'Ban quản lý tổ dân phố',
+        status: 'Thông báo đang hiệu lực',
+        desc: 'Thông báo về bão sắp tới, khuyến cáo cư dân chuẩn bị.',
+      }
+    ];
+
+    let events = JSON.parse(localStorage.getItem('communityEvents') || 'null') || sampleEvents.slice();
+    const tbody = document.getElementById('eventsTbody');
+
+    // Helpers
+    function formatDateTime(iso) {
+      if(!iso) return '';
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso;
+      const dd = String(d.getDate()).padStart(2,'0');
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const yyyy = d.getFullYear();
+      const hh = String(d.getHours()).padStart(2,'0');
+      const min = String(d.getMinutes()).padStart(2,'0');
+      return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+    }
+
+    function typeIcon(type) {
+      switch(type) {
+        case 'Họp Tổ dân phố': return '📣';
+        case 'Hoạt động An ninh/Vệ sinh': return '🗑️';
+        case 'Sự kiện Văn hóa/Thể thao': return '🎉';
+        case 'Thu phí/Đóng góp': return '💰';
+        case 'Thông báo Khẩn cấp': return '🚨';
+        default: return '🔔';
+      }
+    }
+
+    function statusBadge(status) {
+      switch(status) {
+        case 'Sắp diễn ra': return '<span class="badge bg-warning text-dark">Sắp diễn ra</span>';
+        case 'Đã tổ chức': return '<span class="badge bg-success">Đã tổ chức</span>';
+        case 'Thông báo đang hiệu lực': return '<span class="badge bg-info text-dark">Thông báo đang hiệu lực</span>';
+        default: return `<span class="badge bg-light text-dark">${status}</span>`;
+      }
+    }
+
+    // Render table with current filters/search
+    function renderTable(sortKey=null, sortDir=1) {
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      const typeFilter = document.getElementById('filterType').value;
+      const statusFilter = document.getElementById('filterStatus').value;
+
+      let filtered = events.filter(ev => {
+        if(typeFilter !== 'All' && ev.type !== typeFilter) return false;
+        if(statusFilter !== 'All' && ev.status !== statusFilter) return false;
+        if(q){
+          const hay = `${ev.title} ${ev.desc} ${ev.location} ${ev.type} ${ev.actor}`.toLowerCase();
+          if(!hay.includes(q)) return false;
+        }
+        return true;
+      });
+
+      if(sortKey) {
+        filtered.sort((a,b)=>{
+          let va = a[sortKey] || '';
+          let vb = b[sortKey] || '';
+          // date special
+          if(sortKey === 'datetime_start') {
+            return (new Date(va) - new Date(vb)) * sortDir;
+          }
+          if(va < vb) return -1 * sortDir;
+          if(va > vb) return 1 * sortDir;
+          return 0;
+        });
+      }
+
+      tbody.innerHTML = '';
+      filtered.forEach((ev, idx) => {
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+          <td style="white-space:nowrap">${formatDateTime(ev.datetime_start)}</td>
+          <td>${typeIcon(ev.type)} <span class="ms-1">${ev.type}</span></td>
+          <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:bold" title="${ev.title}">${ev.title}</td>
+          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${ev.location}">${ev.location || ''}</td>
+          <td>${ev.actor || ''}</td>
+          <td>${statusBadge(ev.status)}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-info me-1" title="Xem chi tiết" onclick="viewEvent(${idx})"><i class="fa-regular fa-eye"></i></button>
+            <button class="btn btn-sm btn-outline-secondary me-1" title="Chỉnh sửa" onclick="editEvent(${idx})"><i class="fa-regular fa-pen-to-square"></i></button>
+            <button class="btn btn-sm btn-outline-danger" title="Xóa" onclick="deleteEvent(${idx})"><i class="fa-regular fa-trash-can"></i></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Save current events to localStorage
+      localStorage.setItem('communityEvents', JSON.stringify(events));
+    }
+
+    // Sorting behavior (clickable headers)
+    let currentSort = { key: 'datetime_start', dir: -1 }; // default: newest first
+    document.querySelectorAll('th.sortable').forEach(th => {
+      th.addEventListener('click', () => {
+        const key = th.dataset.key;
+        if(currentSort.key === key) currentSort.dir *= -1;
+        else { currentSort.key = key; currentSort.dir = 1; }
+        renderTable(currentSort.key, currentSort.dir);
+      });
+    });
+
+    // Filters & search
+    document.getElementById('filterType').addEventListener('change', () => renderTable(currentSort.key, currentSort.dir));
+    document.getElementById('filterStatus').addEventListener('change', () => renderTable(currentSort.key, currentSort.dir));
+    document.getElementById('searchInput').addEventListener('input', () => renderTable(currentSort.key, currentSort.dir));
+    document.getElementById('clearSearchBtn').addEventListener('click', () => { document.getElementById('searchInput').value=''; renderTable(currentSort.key, currentSort.dir); });
+
+    // Modal behavior
+    const eventModalEl = document.getElementById('eventModal');
+    const eventModal = new bootstrap.Modal(eventModalEl, { keyboard:false });
+
+    function openAddModal() {
+      document.getElementById('eventModalTitle').textContent = 'Tạo Sự kiện/Thông báo Mới';
+      document.getElementById('editingIndex').value = -1;
+      document.getElementById('eventForm').reset();
+      document.getElementById('formAlert').classList.add('d-none');
+      enableForm(true);
+      eventModal.show();
+    }
+
+    // Attach click handler to add button
+    document.getElementById('btnAddEvent').addEventListener('click', openAddModal);
+
+    // Save event
+    document.getElementById('eventForm').addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const idx = parseInt(document.getElementById('editingIndex').value, 10);
+      const title = document.getElementById('evtTitle').value.trim();
+      const type = document.getElementById('evtType').value;
+      const startDate = document.getElementById('evtStartDate').value;
+      const startTime = document.getElementById('evtStartTime').value;
+      const endDate = document.getElementById('evtEndDate').value;
+      const endTime = document.getElementById('evtEndTime').value;
+      const location = document.getElementById('evtLocation').value.trim();
+      const actor = document.getElementById('evtActor').value.trim();
+      const desc = document.getElementById('evtDesc').value.trim();
+      const status = document.getElementById('evtStatus').value;
+      const fileInput = document.getElementById('evtFile');
+
+      const alertBox = document.getElementById('formAlert');
+      alertBox.classList.add('d-none');
+
+      // basic validation
+      if(!title || !type || !startDate || !startTime || !location || !actor || !status) {
+        alertBox.textContent = 'Vui lòng điền đầy đủ các trường bắt buộc (*).';
+        alertBox.classList.remove('d-none');
+        return;
+      }
+
+      const startIso = `${startDate}T${startTime}`;
+      const endIso = (endDate && endTime) ? `${endDate}T${endTime}` : '';
+
+      const evt = { datetime_start: startIso, datetime_end: endIso, type, title, location, actor, status, desc };
+
+      // simple file handling: store filename only (not actual file)
+      if(fileInput && fileInput.files && fileInput.files.length) {
+        evt.attachmentName = fileInput.files[0].name;
+      }
+
+      if(idx >= 0 && idx < events.length) {
+        // update existing
+        events[idx] = evt;
+      } else {
+        // append
+        events.push(evt);
+      }
+
+      eventModal.hide();
+      renderTable(currentSort.key, currentSort.dir);
+    });
+
+    // Edit
+    function editEvent(listIndex) {
+      const ev = events[listIndex];
+      if(!ev) return;
+      document.getElementById('eventModalTitle').textContent = 'Sửa Sự kiện/Thông báo';
+      document.getElementById('editingIndex').value = listIndex;
+      document.getElementById('evtTitle').value = ev.title || '';
+      document.getElementById('evtType').value = ev.type || '';
+      if(ev.datetime_start){
+        const d = new Date(ev.datetime_start);
+        if(!Number.isNaN(d.getTime())) {
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth()+1).padStart(2,'0');
+          const dd = String(d.getDate()).padStart(2,'0');
+          const hh = String(d.getHours()).padStart(2,'0');
+          const min = String(d.getMinutes()).padStart(2,'0');
+          document.getElementById('evtStartDate').value = `${yyyy}-${mm}-${dd}`;
+          document.getElementById('evtStartTime').value = `${hh}:${min}`;
+        } else {
+          document.getElementById('evtStartDate').value = '';
+          document.getElementById('evtStartTime').value = '';
+        }
+      }
+      if(ev.datetime_end){
+        const d = new Date(ev.datetime_end);
+        if(!Number.isNaN(d.getTime())) {
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth()+1).padStart(2,'0');
+          const dd = String(d.getDate()).padStart(2,'0');
+          const hh = String(d.getHours()).padStart(2,'0');
+          const min = String(d.getMinutes()).padStart(2,'0');
+          document.getElementById('evtEndDate').value = `${yyyy}-${mm}-${dd}`;
+          document.getElementById('evtEndTime').value = `${hh}:${min}`;
+        } else {
+          document.getElementById('evtEndDate').value = '';
+          document.getElementById('evtEndTime').value = '';
+        }
+      } else {
+        document.getElementById('evtEndDate').value = '';
+        document.getElementById('evtEndTime').value = '';
+      }
+      document.getElementById('evtLocation').value = ev.location || '';
+      document.getElementById('evtActor').value = ev.actor || '';
+      document.getElementById('evtDesc').value = ev.desc || '';
+      document.getElementById('evtStatus').value = ev.status || '';
+      document.getElementById('evtFile').value = '';
+      document.getElementById('formAlert').classList.add('d-none');
+      enableForm(true);
+      eventModal.show();
+    }
+
+    // View (read-only)
+    function viewEvent(listIndex) {
+      editEvent(listIndex); // Reuse edit to populate
+      document.getElementById('eventModalTitle').textContent = 'Xem Chi tiết Sự kiện/Thông báo';
+      enableForm(false);
+      document.getElementById('saveEventBtn').style.display = 'none';
+    }
+
+    function enableForm(enabled) {
+      const inputs = document.querySelectorAll('#eventForm input, #eventForm select, #eventForm textarea');
+      inputs.forEach(input => {
+        input.disabled = !enabled;
+      });
+      document.getElementById('saveEventBtn').style.display = enabled ? 'block' : 'none';
+    }
+
+    // Delete
+    function deleteEvent(listIndex) {
+      const ev = events[listIndex];
+      if(!ev) return;
+      const ok = confirm(`Xóa sự kiện "${ev.title}"?`);
+      if(!ok) return;
+      events.splice(listIndex,1);
+      renderTable(currentSort.key, currentSort.dir);
+    }
+
+    // initialize
+    renderTable(currentSort.key, currentSort.dir);
+
+    // navigation / helpers
+    function goTo(p){ window.location.href=p; }
+    function logout(){ localStorage.removeItem('username'); window.location.href='/'; }
+  </script>
+</body>
+</html>
